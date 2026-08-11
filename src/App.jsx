@@ -690,14 +690,14 @@ function ProdukTab({ data, save, stockMap, stokAkhir, flash }) {
 
   // GANTI DENGAN KODE AMAN INI:
 // CUKUP GANTI KATA 'filtered' MENJADI 'filteredProducts' DI BARIS INI:
-const filteredProducts = (data || []).filter((e) => {
-  if (!e) return false;
+const filteredProducts = (data || []).filter((item) => {
+  if (!item) return false;
 
   // Mengubah semua data menjadi teks (String) agar angka stok/harga tidak bikin crash
-  const kode = String(e.kode || "").toLowerCase();
-  const nama = String(e.nama || "").toLowerCase();
-  const warna = String(e.warna || "").toLowerCase();
-  const brand = String(e.brand || "").toLowerCase();
+  const kode = String(item.kode || "").toLowerCase();
+  const nama = String(item.nama || "").toLowerCase();
+  const warna = String(item.warna || "").toLowerCase();
+  const brand = String(item.brand || "").toLowerCase();
   const kataKunci = String(search || "").toLowerCase();
   return kode.includes(kataKunci) || nama.includes(kataKunci) || warna.includes(kataKunci) || brand.includes(kataKunci);
 });
