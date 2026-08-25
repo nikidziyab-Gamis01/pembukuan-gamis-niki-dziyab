@@ -554,7 +554,19 @@ export default function GamisInventoryApp() {
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 4, marginTop: 16, overflowX: "auto", whiteSpace: "nowrap", width: "100%", paddingBottom: 6 }} className="gm-tab-scroll">
+                  {/* FIX NAVIGASI: TURUN 2 BARIS DI LAPTOP, SCROLL DI HP TANPA MERUSAK TAMPILAN */}
+        <div 
+          style={{ 
+            display: "flex", 
+            gap: "6px 4px", 
+            marginTop: 16, 
+            overflowX: window.innerWidth < 768 ? "auto" : "visible", 
+            flexWrap: window.innerWidth < 768 ? "nowrap" : "wrap", 
+            width: "100%", 
+            paddingBottom: 6 
+          }} 
+          className="gm-tab-scroll"
+        >
             {TABS.map((t) => {
               const Icon = t.icon;
               const active = tab === t.id;
@@ -742,7 +754,7 @@ function Dashboard({ data, stockMap, stokAkhir }) {
     { label: "Estimasi Laba Bersih", value: `Rp ${fmt(labaRugiBersihPencairan)}`, color: labaRugiBersihPencairan >= 0 ? C.success : C.danger },
   ];
 
-  return (
+    return (
     <div>
       {/* RENDER KOTAK METRIK UTAMA */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 18 }}>
@@ -754,7 +766,7 @@ function Dashboard({ data, stockMap, stokAkhir }) {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.3fr", gap: 16, alignItems: "stretch", marginBottom: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, alignItems: "stretch", marginBottom: 18 }}>
         {/* GRAFIK PENJUALAN BULANAN */}
         <SectionCard title="Tren Volume Barang Keluar" subtitle="Analisis Kuantitas Jualan Bulanan">
           <div style={{ height: 220 }}>
@@ -764,7 +776,7 @@ function Dashboard({ data, stockMap, stokAkhir }) {
                 <XAxis dataKey="bulan" tick={{ fontSize: 12, fill: C.muted }} axisLine={{ stroke: C.border }} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: C.muted }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 12 }} />
-                <Bar dataKey="qty" fill={C.primary} radius={[5, 5, 0, 0]}>
+                <Bar dataKey="qty" fill={C.primary} radius={[4, 4, 0, 0]}>
                   {chartData.map((entry, i) => (
                     <Cell key={i} fill={entry.bulan === bulanIni.slice(0, 3) ? C.primary : C.accentSoft} />
                   ))}
@@ -774,7 +786,7 @@ function Dashboard({ data, stockMap, stokAkhir }) {
           </div>
         </SectionCard>
 
-        {/* FIX GRAFIK TOP SELLING VERTIKAL (SAMA PERSIS DENGAN TREN VOLUME BULANAN) */}
+        {/* GRAFIK TOP SELLING VERTIKAL */}
         <SectionCard title="🔥 5 Produk Terlaris (Top Selling)" subtitle="Berdasarkan Kuantitas Unit Terjual">
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -794,7 +806,8 @@ function Dashboard({ data, stockMap, stokAkhir }) {
         </SectionCard>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 18 }}>
+      {/* FIX UTAMA TAMPILAN JELAS DI HP: MENGUBAH GRID MENJADI AUTO-FIT RESPONSIVE */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 16, marginBottom: 18 }}>
         <SectionCard title="Ringkasan Arus Dana Masuk" subtitle="Volume keluar vs konfirmasi dana cair bersih">
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <Stat label="Total Volume Keluar Toko" value={`${fmt(totalKeluar)} Pcs`} />
@@ -807,14 +820,16 @@ function Dashboard({ data, stockMap, stokAkhir }) {
           {lowStock.length === 0 ? (
             <div style={{ fontSize: 13, color: C.muted }}>Seluruh stok aman berada di atas batas minimum.</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 115, overflowY: "auto", paddingRight: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 150, overflowY: "auto", paddingRight: 4 }}>
               {lowStock.map((p) => (
-                <div key={p.kode} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: C.surfaceAlt, borderRadius: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: WARNA_SWATCH[p.warna] || C.muted, display: "inline-block" }} />
-                    <span style={{ fontSize: 12, fontWeight: 500 }}>{p.kode} — {p.nama}</span>
+                <div key={p.kode} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: C.surfaceAlt, borderRadius: 8, gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: WARNA_SWATCH[p.warna] || C.muted, display: "inline-block", flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {p.kode} — {p.nama}
+                    </span>
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: C.danger }}>{stokAkhir(p.kode)} Pcs</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.danger, flexShrink: 0 }}>{stokAkhir(p.kode)} Pcs</span>
                 </div>
               ))}
             </div>
@@ -834,7 +849,6 @@ function Stat({ label, value, color }) {
     </div>
   );
 }
-
 
 // ---------- Produk & Stok ----------
 function ProdukTab({ data, save, stockMap, stokAkhir, flash }) {
