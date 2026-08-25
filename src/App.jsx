@@ -465,13 +465,14 @@ export default function GamisInventoryApp() {
   }
   return (
     <div style={{ background: C.bg, minHeight: 640, fontFamily: "'IBM Plex Sans', sans-serif", color: C.text }}>
-        <style>{`
+              <style>{`
         @import url('https://googleapis.com');
         .gm-h1 { font-family: 'Fraunces', serif; }
         .gm-input, .gm-select {
           background: #fff; border: 1px solid ${C.border}; border-radius: 8px;
           padding: 8px 10px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px;
           color: ${C.text}; width: 100%; outline: none; transition: border-color .15s;
+          box-sizing: border-box !important;
         }
         .gm-input:focus, .gm-select:focus { border-color: ${C.primary}; }
         .gm-btn {
@@ -479,6 +480,7 @@ export default function GamisInventoryApp() {
           padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
           display: inline-flex; align-items: center; gap: 6px; transition: background .15s;
           font-family: 'IBM Plex Sans', sans-serif;
+          box-sizing: border-box !important;
         }
         .gm-btn:hover { background: ${C.primaryDark}; }
         .gm-btn-ghost {
@@ -490,19 +492,12 @@ export default function GamisInventoryApp() {
         .gm-table tr:hover td { background: ${C.surfaceAlt}; }
         .gm-tab-scroll::-webkit-scrollbar { height: 4px; }
         .gm-tab-scroll::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 4px; }
-        .gm-card { background: ${C.surface}; border: 1px solid ${C.border}; border-radius: 14px; }
+        .gm-card { background: ${C.surface}; border: 1px solid ${C.border}; border-radius: 14px; max-width: 100% !important; overflow: hidden !important; box-sizing: border-box !important; }
 
         /* ==========================================================================
-           FIX GLOBAL: MEMASTIKAN TABEL DI SEMUA TAB BISA DI-SWIPE RAPI DI HP
+           FIX GLOBAL TABEL RESPONSIF SWIPE HP
            ========================================================================== */
-        .gm-card { 
-          max-width: 100% !important; 
-          overflow: hidden !important; 
-        }
-        .gm-card > div { 
-          max-width: 100% !important; 
-        }
-        /* Memaksa seluruh tabel memiliki scrollbar horizontal halus jika meluber di HP */
+        .gm-card > div { max-width: 100% !important; box-sizing: border-box !important; }
         .gm-card table { 
           display: block !important;
           width: 100% !important;
@@ -510,39 +505,43 @@ export default function GamisInventoryApp() {
           white-space: nowrap !important;
           -webkit-overflow-scrolling: touch !important;
         }
-        .gm-card table thead, .gm-card table tbody {
-          display: table !important;
-          width: 100% !important;
-        }
+        .gm-card table thead, .gm-card table tbody { display: table !important; width: 100% !important; }
 
         /* ==========================================================================
-           MODIFIKASI LINK MEDIA QUERY KHUSUS HP (TIDAK MERUSAK TAMPILAN LAPTOP)
+           MODIFIKASI MEDIA QUERY MEDIA HP (100% AMAN DI LAPTOP / PC)
            ========================================================================== */
         @media (max-width: 768px) {
           .gm-header-flex { flex-direction: column !important; align-items: center !important; text-align: center !important; gap: 8px !important; }
           .gm-brand-group { flex-direction: column !important; text-align: center !important; gap: 4px !important; }
           .gm-brand-group .gm-h1 { fontSize: 16px !important; }
-          .gm-subtitle-hp { display: none !important; } /* Sembunyikan teks panjang yang makan tempat */
+          .gm-subtitle-hp { display: none !important; } 
           .gm-actions-group { justify-content: center !important; width: 100% !important; gap: 6px !important; margin-top: 4px !important; }
           .gm-account-badge { width: 100% !important; justify-content: center !important; padding: 4px 10px !important; margin-right: 0 !important; }
-          .gm-btn-wrap-hp { width: calc(25% - 5px) !important; justify-content: center !important; padding: 8px 0 !important; font-size: 0 !important; } /* Hilangkan teks, sisakan icon saja agar muat 1 baris */
+          .gm-btn-wrap-hp { width: calc(25% - 5px) !important; justify-content: center !important; padding: 8px 0 !important; font-size: 0 !important; } 
           .gm-btn-wrap-hp span { display: none !important; }
-          .gm-btn-full-hp { width: 100% !important; justify-content: center !important; padding: 10px 0 !important; }
+          .gm-btn-full-hp { width: 100% !important; justify-content: center !important; padding: 8px 0 !important; }
 
-          /* Merapikan seluruh form grid agar otomatis menjadi 1 kolom vertikal lurus di HP */
-          .gm-card div[style*="display: grid"], 
-          .gm-card div[style*="display:grid"] {
+          /* PAKSA SEMUA DIV YANG PUNYA ATURAN DISPLAY GRID DI DALAM KARTU SUB-TAB MENJADI 1 KOLOM */
+          .gm-card div[style*="grid"], 
+          .gm-card div[style*="Grid"],
+          .gm-card div[style*="GRID"] {
             grid-template-columns: 1fr !important;
-            gap: 12px !important;
-          }
-          .gm-card button.gm-btn, 
-          .gm-card input.gm-input, 
-          .gm-card select.gm-select {
+            display: grid !important;
             width: 100% !important;
+            gap: 12px !important;
+            box-sizing: border-box !important;
+          }
+          
+          /* Aturan pengaman ukuran element formulir */
+          .gm-card .gm-input,
+          .gm-card .gm-select,
+          .gm-card button.gm-btn {
+            width: 100% !important;
+            display: block !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>
-
 
       {menuOpen && <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
