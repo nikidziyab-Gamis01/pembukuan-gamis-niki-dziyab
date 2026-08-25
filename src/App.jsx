@@ -1108,24 +1108,34 @@ function KeluarTab({ data, save, stokAkhir, flash }) {
   const rows = (safeData.keluar || []).filter((k) => monthFilter === "SEMUA" || monthOf(k.tanggal) === monthFilter);
   const totalQty = rows.reduce((s, k) => s + (Number(k.qty) || 0), 0);
 
-  return (
+    return (
     <div>
       <SectionCard title="Catat Jualan / Barang Keluar Omnichannel" subtitle="Rekam pengeluaran stok komersial maupun alokasi biaya pengiriman sampel kreator gratis">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px,1fr))", gap: 10 }}>
-          <Field label="Tanggal Keluar"><input className="gm-input" type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></Field>
-          <Field label="Kode Pesanan / Resi / Nama Staf"><input className="gm-input" value={form.kodePesanan} onChange={(e) => setForm({ ...form, kodePesanan: e.target.value })} placeholder="Ketik nomor resi / nama creator…" /></Field>
+        
+        {/* BARIS INPUT ATAS (SEJAJAR LURUS & RATA KANAN-KIRI) */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 16 }}>
+          <Field label="Tanggal Keluar">
+            <input className="gm-input" type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} />
+          </Field>
+          
+          <Field label="Kode Pesanan / Resi / Nama Staf">
+            <input className="gm-input" value={form.kodePesanan} onChange={(e) => setForm({ ...form, kodePesanan: e.target.value })} placeholder="Resi / nama creator promosi" />
+          </Field>
+          
           <Field label="Admin Shift">
             <select className="gm-select" value={form.shift} onChange={(e) => setForm({ ...form, shift: e.target.value })}>
               <option value="">Pilih Admin…</option>
               {karyawanList.map((k) => <option key={k} value={k}>{k}</option>)}
             </select>
           </Field>
+          
           <Field label="Host Live">
             <select className="gm-select" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })}>
               <option value="">Pilih Host…</option>
               {karyawanList.map((k) => <option key={k} value={k}>{k}</option>)}
             </select>
           </Field>
+          
           <Field label="Channel / Jenis Keluar">
             <select className="gm-select" value={form.toko} onChange={(e) => setForm({ ...form, toko: e.target.value })}>
               {TOKO_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -1133,15 +1143,23 @@ function KeluarTab({ data, save, stokAkhir, flash }) {
               <option value="Sample Affiliate (Manual + Ongkir Toko)">🚚 Sample Affiliate (Manual + Ongkir Toko)</option>
             </select>
           </Field>
+          
           <Field label="COD / Non COD">
             <select className="gm-select" value={form.cod} onChange={(e) => setForm({ ...form, cod: e.target.value })} disabled={isSampleCategory}>
-              <option>NON COD</option><option>COD</option>
+              <option>NON COD</option>
+              <option>COD</option>
             </select>
           </Field>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 10, marginTop: 10, alignItems: "end" }}>
-          <Field label="Pilih Produk SKU"><ProductSelect products={safeData.products || []} value={form.kode} onChange={(v) => setForm({ ...form, kode: v })} /></Field>
-          <Field label="Kuantitas Qty"><input className="gm-input" type="number" min="1" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} /></Field>
+
+        {/* BARIS INPUT BAWAH */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.2fr", gap: 12, alignItems: "end" }}>
+          <Field label="Pilih Produk SKU">
+            <ProductSelect products={safeData.products || []} value={form.kode} onChange={(v) => setForm({ ...form, kode: v })} />
+          </Field>
+          <Field label="Kuantitas Qty">
+            <input className="gm-input" type="number" min="1" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} />
+          </Field>
           <Field label="Harga Jual Bruto Aplikasi (Rp)">
             <input 
               className="gm-input" 
@@ -1152,10 +1170,13 @@ function KeluarTab({ data, save, stokAkhir, flash }) {
               disabled={isSampleCategory}
             />
           </Field>
-          <button className="gm-btn" onClick={submit}><Plus size={15} /> Simpan Data</button>
+          <button className="gm-btn" onClick={submit} style={{ width: "100%", justifyContent: "center", padding: "10px 0" }}>
+            <Plus size={15} /> Simpan Data Keluar
+          </button>
         </div>
       </SectionCard>
 
+      {/* TABEL DATA HISTORI JUALAN & SAMPLE */}
       <SectionCard title="Riwayat Barang Keluar & Validasi Dana Kas" subtitle={`Volume jualan terfilter: ${fmt(totalQty)} Pcs`} right={
         <select className="gm-select" style={{ width: 160 }} value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
           {months.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -1232,7 +1253,6 @@ function KeluarTab({ data, save, stokAkhir, flash }) {
                           let nextBukuKas = [...(safeData.bukuKas || [])];
 
                           if (isAnySample) {
-                            // AMBIL NILAI MODAL UTAMA HPP BARANG
                             const totalHppSample = k.qty * (prod.hpp || 0);
                             const nominalOngkirFix = isSampleManual ? Number(ongkirSampleManual[k.id] || 0) : 0;
 
@@ -1245,7 +1265,6 @@ function KeluarTab({ data, save, stokAkhir, flash }) {
                             const nextKeluar = (safeData.keluar || []).map((x) => x.id === k.id ? { ...x, cair: !x.cair, nominalCairRiil: 0, nominalOngkirSample: nominalOngkirFix } : x);
                             
                             if (!k.cair) {
-                              // INPUT PENGELUARAN (KREDIT) KE BUKU KAS SEBAGAI BIAYA PROMOSI
                               nextBukuKas.unshift({
                                 id: uid(),
                                 tanggal: todayStr(),
@@ -1259,7 +1278,6 @@ function KeluarTab({ data, save, stokAkhir, flash }) {
                             save({ ...safeData, keluar: nextKeluar, bukuKas: nextBukuKas });
                             flash("Seluruh akumulasi biaya modal & ongkir sampel sukses dibukukan sebagai Kredit!");
                           } else {
-                            // SKEMA TRANSAKSI MARKETPLACE BIASA
                             if (!k.cair && !inputCairManual[k.id]) {
                               alert("Mohon isi nominal pencairan bersih riil terlebih dahulu sesuai mutasi rekening/wallet toko!");
                               return;
@@ -1299,7 +1317,6 @@ function KeluarTab({ data, save, stokAkhir, flash }) {
     </div>
   );
 }
-
 
 // ---------- Retur ----------
 function ReturTab({ data, save, flash }) {
