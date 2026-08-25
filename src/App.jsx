@@ -465,7 +465,7 @@ export default function GamisInventoryApp() {
   }
   return (
     <div style={{ background: C.bg, minHeight: 640, fontFamily: "'IBM Plex Sans', sans-serif", color: C.text }}>
-            <style>{`
+        <style>{`
         @import url('https://googleapis.com');
         .gm-h1 { font-family: 'Fraunces', serif; }
         .gm-input, .gm-select {
@@ -493,7 +493,30 @@ export default function GamisInventoryApp() {
         .gm-card { background: ${C.surface}; border: 1px solid ${C.border}; border-radius: 14px; }
 
         /* ==========================================================================
-           MODIFIKASI LINK MEDIA QUERY KHUSUS HP (TIDAK MERUSAK LAPTOP)
+           FIX GLOBAL: MEMASTIKAN TABEL DI SEMUA TAB BISA DI-SWIPE RAPI DI HP
+           ========================================================================== */
+        .gm-card { 
+          max-width: 100% !important; 
+          overflow: hidden !important; 
+        }
+        .gm-card > div { 
+          max-width: 100% !important; 
+        }
+        /* Memaksa seluruh tabel memiliki scrollbar horizontal halus jika meluber di HP */
+        .gm-card table { 
+          display: block !important;
+          width: 100% !important;
+          overflow-x: auto !important;
+          white-space: nowrap !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+        .gm-card table thead, .gm-card table tbody {
+          display: table !important;
+          width: 100% !important;
+        }
+
+        /* ==========================================================================
+           MODIFIKASI LINK MEDIA QUERY KHUSUS HP (TIDAK MERUSAK TAMPILAN LAPTOP)
            ========================================================================== */
         @media (max-width: 768px) {
           .gm-header-flex { flex-direction: column !important; align-items: center !important; text-align: center !important; gap: 8px !important; }
@@ -504,9 +527,22 @@ export default function GamisInventoryApp() {
           .gm-account-badge { width: 100% !important; justify-content: center !important; padding: 4px 10px !important; margin-right: 0 !important; }
           .gm-btn-wrap-hp { width: calc(25% - 5px) !important; justify-content: center !important; padding: 8px 0 !important; font-size: 0 !important; } /* Hilangkan teks, sisakan icon saja agar muat 1 baris */
           .gm-btn-wrap-hp span { display: none !important; }
-          .gm-btn-full-hp { width: 100% !important; justify-content: center !important; padding: 8px 0 !important; }
+          .gm-btn-full-hp { width: 100% !important; justify-content: center !important; padding: 10px 0 !important; }
+
+          /* Merapikan seluruh form grid agar otomatis menjadi 1 kolom vertikal lurus di HP */
+          .gm-card div[style*="display: grid"], 
+          .gm-card div[style*="display:grid"] {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .gm-card button.gm-btn, 
+          .gm-card input.gm-input, 
+          .gm-card select.gm-select {
+            width: 100% !important;
+          }
         }
       `}</style>
+
 
       {menuOpen && <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
