@@ -465,7 +465,7 @@ export default function GamisInventoryApp() {
   }
   return (
     <div style={{ background: C.bg, minHeight: 640, fontFamily: "'IBM Plex Sans', sans-serif", color: C.text }}>
-      <style>{`
+            <style>{`
         @import url('https://googleapis.com');
         .gm-h1 { font-family: 'Fraunces', serif; }
         .gm-input, .gm-select {
@@ -491,26 +491,45 @@ export default function GamisInventoryApp() {
         .gm-tab-scroll::-webkit-scrollbar { height: 4px; }
         .gm-tab-scroll::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 4px; }
         .gm-card { background: ${C.surface}; border: 1px solid ${C.border}; border-radius: 14px; }
+
+        /* ==========================================================================
+           MODIFIKASI LINK MEDIA QUERY KHUSUS HP (TIDAK MERUSAK LAPTOP)
+           ========================================================================== */
+        @media (max-width: 768px) {
+          .gm-header-flex { flex-direction: column !important; align-items: center !important; text-align: center !important; gap: 16px !important; }
+          .gm-brand-group { flex-direction: column !important; text-align: center !important; }
+          .gm-actions-group { justify-content: center !important; width: 100% !important; gap: 8px !important; }
+          .gm-account-badge { margin-right: 0 !important; width: 100% !important; justify-content: center !important; }
+          .gm-btn-wrap-hp { width: calc(50% - 4px) !important; justify-content: center !important; padding: 10px 8px !important; font-size: 12px !important; }
+          .gm-btn-full-hp { width: 100% !important; justify-content: center !important; padding: 10px 0 !important; }
+        }
       `}</style>
 
       {menuOpen && <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
-      {/* header */}
+            {/* header */}
       <div style={{ borderBottom: `1px solid ${C.border}`, background: C.surface, position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ padding: "18px 24px 0" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 9, background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          
+          {/* KONTAINER UTAMA HEADER DENGAN CLASS FLEX RESPONSIF */}
+          <div className="gm-header-flex" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            
+            {/* KELOMPOK LOGO DAN JUDUL BRAND */}
+            <div className="gm-brand-group" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 38, height: 34, borderRadius: 9, background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, margin: "0 auto" }}>
                 <Shirt size={18} color={C.accentSoft} />
               </div>
               <div>
                 <div className="gm-h1" style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.1, color: C.primaryDark }}>Pembukuan Gamis Niki Dziyab</div>
-                <div style={{ fontSize: 11.5, color: C.muted }}>Stok & HPP Master · Barang Masuk & Keluar · Retur · Reject · Pencairan · Keuangan</div>
+                <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>Stok & HPP Master · Barang Masuk & Keluar · Retur · Reject · Pencairan · Keuangan</div>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 6, position: "relative", flexWrap: "wrap", justifyContent: "flex-end" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 999, padding: "6px 10px 6px 8px", marginRight: 4 }}>
+            {/* KELOMPOK AKUN DAN TOMBOL AKSI UTAMA */}
+            <div className="gm-actions-group" style={{ display: "flex", alignItems: "center", gap: 6, position: "relative", flexWrap: "wrap", justifyContent: "flex-end" }}>
+              
+              {/* BADGE INFORMASI AKUN LOGIN */}
+              <div className="gm-account-badge" style={{ display: "flex", alignItems: "center", gap: 8, background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 999, padding: "6px 12px 6px 8px", marginRight: 4 }}>
                 {user?.photoURL ? (
                   <img src={user.photoURL} alt="Avatar" style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover", border: `1px solid ${C.border}` }} />
                 ) : (
@@ -518,34 +537,37 @@ export default function GamisInventoryApp() {
                     {((user?.displayName || user?.email || "A").charAt(0) || "A").toUpperCase()}
                   </div>
                 )}
-                <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2, minWidth: 0 }}>
-                  <span style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Akun</span>
-                  <span style={{ fontSize: 11.5, color: C.primaryDark, fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2, minWidth: 0, textAlign: "left" }}>
+                  <span style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>Akun Tim</span>
+                  <span style={{ fontSize: 11.5, color: C.primaryDark, fontWeight: 600, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {user?.displayName || user?.email || "Google User"}
                   </span>
                 </div>
               </div>
 
-              <button className="gm-btn-ghost" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", background: "transparent" }} onClick={logout}>
+              {/* BARISAN TOMBOL OPERASIONAL (OTOMATIS BERBAGI UKURAN LEBAR 50% DI HP) */}
+              <button className="gm-btn-ghost gm-btn-wrap-hp" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", background: "transparent" }} onClick={logout}>
                 <XCircle size={14} /> Logout
               </button>
 
               <input ref={fileInputRef} type="file" accept="application/json" onChange={handleImportFile} style={{ display: "none" }} />
-              <button className="gm-btn-ghost" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", background: "transparent" }} onClick={() => fileInputRef.current?.click()}>
+              <button className="gm-btn-ghost gm-btn-wrap-hp" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", background: "transparent" }} onClick={() => fileInputRef.current?.click()}>
                 <Upload size={14} /> Impor
               </button>
-              <button className="gm-btn-ghost" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", background: "transparent" }} onClick={saveAsFile}>
+              <button className="gm-btn-ghost gm-btn-wrap-hp" style={{ borderRadius: 8, padding: "8px 12px", fontSize: 12.5, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", background: "transparent" }} onClick={saveAsFile}>
                 <Download size={14} /> Backup File
               </button>
-              <button className="gm-btn" style={{ padding: "8px 14px", fontSize: 12.5, background: C.success }} onClick={syncCloudNow}>
-                <Save size={14} /> Update Real-time
+              <button className="gm-btn gm-btn-wrap-hp" style={{ padding: "8px 14px", fontSize: 12.5, background: C.success }} onClick={syncCloudNow}>
+                <Save size={14} /> Real-time
               </button>
-              <div style={{ position: "relative" }}>
-                <button className="gm-btn" style={{ padding: "8px 14px", fontSize: 12.5, background: C.accent }} onClick={() => setMenuOpen((v) => !v)}>
-                  Export {menuOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              
+              {/* TOMBOL EXPORT UTAMA (MELEBAR 100% DI HP MENGISI BARIS PALING BAWAH SECARA SIMETRIS) */}
+              <div className="gm-btn-full-hp" style={{ position: "relative" }}>
+                <button className="gm-btn gm-btn-full-hp" style={{ padding: "8px 14px", fontSize: 12.5, background: C.accent }} onClick={() => setMenuOpen((v) => !v)}>
+                  Export Menu {menuOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
                 {menuOpen && (
-                  <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,.14)", overflow: "hidden", zIndex: 30, minWidth: 190 }}>
+                  <div style={{ position: "absolute", right: window.innerWidth < 768 ? "auto" : 0, left: window.innerWidth < 768 ? 0 : "auto", top: "calc(100% + 6px)", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,.14)", overflow: "hidden", zIndex: 30, minWidth: window.innerWidth < 768 ? "100%" : 190 }}>
                     <MenuItem icon={FileSpreadsheet} label="Export ke Excel (.xlsx)" onClick={() => { exportExcel(data, stockMap, stokAkhir); setMenuOpen(false); flash("Excel diunduh"); }} />
                     <MenuItem icon={FileText} label="Export ke Word (.doc)" onClick={() => { exportWord(data, stockMap, stokAkhir); setMenuOpen(false); flash("Word diunduh"); }} />
                     <MenuItem icon={Printer} label="Export ke PDF" onClick={() => { setMenuOpen(false); setPrintView(true); }} />
@@ -554,7 +576,8 @@ export default function GamisInventoryApp() {
               </div>
             </div>
           </div>
-                  {/* FIX NAVIGASI: TURUN 2 BARIS DI LAPTOP, SCROLL DI HP TANPA MERUSAK TAMPILAN */}
+          
+        {/* FIX NAVIGASI: TURUN 2 BARIS DI LAPTOP, SCROLL DI HP TANPA MERUSAK TAMPILAN */}
         <div 
           style={{ 
             display: "flex", 
