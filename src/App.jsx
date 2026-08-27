@@ -487,8 +487,25 @@ export default function GamisInventoryApp() {
           background: transparent; color: ${C.primary}; border: 1px solid ${C.primary};
         }
         .gm-btn-ghost:hover { background: ${C.primarySoft}; }
-        .gm-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: ${C.muted}; font-weight: 600; padding: 10px 12px; border-bottom: 1px solid ${C.border}; white-space: nowrap; }
-        .gm-table td { padding: 10px 12px; border-bottom: 1px solid ${C.border}; font-size: 13px; vertical-align: middle; white-space: nowrap; }
+                .gm-table th { 
+          text-align: left; 
+          font-size: 11px; 
+          text-transform: uppercase; 
+          letter-spacing: .04em; 
+          color: ${C.muted}; 
+          font-weight: 600; 
+          padding: 10px 12px; 
+          border-bottom: 1px solid ${C.border}; 
+          vertical-align: top; /* Membuat semua judul rata atas */
+          white-space: normal !important; /* Judul yang panjang otomatis turun ke bawah */
+        }
+        .gm-table td { 
+          padding: 10px 12px; 
+          border-bottom: 1px solid ${C.border}; 
+          font-size: 13px; 
+          vertical-align: top; /* Membuat isi data rata atas agar sejajar dengan kolom sebelah */
+          white-space: normal !important; /* Isi data yang panjang otomatis turun ke bawah */
+        }
         .gm-table tr:hover td { background: ${C.surfaceAlt}; }
         .gm-tab-scroll::-webkit-scrollbar { height: 4px; }
         .gm-tab-scroll::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 4px; }
@@ -502,7 +519,7 @@ export default function GamisInventoryApp() {
           display: block !important;
           width: 100% !important;
           overflow-x: auto !important;
-          white-space: nowrap !important;
+          white-space: normal !important; /* Mengubah nowrap menjadi normal agar teks di HP juga rapi */
           -webkit-overflow-scrolling: touch !important;
         }
         .gm-card table thead, .gm-card table tbody { display: table !important; width: 100% !important; }
@@ -1262,13 +1279,23 @@ function KeluarTab({ data, save, stokAkhir, flash }) {
       }>
         <div style={{ overflowX: "auto" }}>
           <table className="gm-table" style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
+                        <thead>
               <tr>
-                <th>Tanggal</th><th>Platform / Keperluan</th><th>Invoice / Memo</th><th>SKU</th><th>Qty</th><th>Omset Bruto</th><th>Input Bersih Cair / Ongkir Sampel</th><th>Konfirmasi Status Kas</th><th>Tindakan</th>
+                <th>Tanggal</th>
+                <th>Platform / Keperluan</th>
+                <th>Invoice / Memo</th>
+                <th>Admin</th>
+                <th>Host</th>
+                <th>SKU</th>
+                <th>Qty</th>
+                <th>Omset Bruto</th>
+                <th>Input Bersih Cair / Ongkir Sampel</th>
+                <th>Konfirmasi Status Kas</th>
+                <th>Tindakan</th>
               </tr>
             </thead>
-            <tbody>
-              {rows.length === 0 && <EmptyRow colSpan={9} text="Belum ada catatan barang keluar." />}
+                        <tbody>
+              {rows.length === 0 && <EmptyRow colSpan={11} text="Belum ada catatan barang keluar." />}
               {rows.map((k) => {
                 const prod = (safeData.products || []).find((p) => p.kode === k.kode) || {};
                 const isSampleApp = k.toko === "Sample Affiliate (Aplikasi)";
@@ -1280,6 +1307,8 @@ function KeluarTab({ data, save, stokAkhir, flash }) {
                     <td>{k.tanggal}</td>
                     <td><span style={{ color: isAnySample ? C.secondary : "inherit", fontWeight: isAnySample ? "bold" : "normal" }}>{k.toko}</span></td>
                     <td>{k.kodePesanan || "—"}</td>
+                    <td>{k.shift || "—"}</td>
+                    <td>{k.host || "—"}</td>
                     <td style={{ fontFamily: "monospace", fontWeight: 700, color: C.primary }}>{k.kode}</td>
                     <td>{fmt(k.qty)} Pcs</td>
                     <td>{isAnySample ? <span style={{ color: C.muted }}>Sampel Gratis</span> : `Rp ${fmt(k.qty * (k.hargaJual || 0))}`}</td>
