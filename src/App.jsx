@@ -108,7 +108,7 @@ const normalizeData = (value) => {
 };
 
 const EMPTY_DATA = normalizeData({
-  products: [], masuk: [], keluar: [], retur: [], reject: [], masterCode: EMPTY_MASTER, kasbon: [], karyawanMaster: [], bukuKas: []
+  products: [], masuk: [], keluar: [], retur: [], reject: [], utangPiutang: [], masterCode: EMPTY_MASTER, kasbon: [], karyawanMaster: [], bukuKas: []
 });
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -1652,15 +1652,46 @@ function LabaRugiTab({ data }) {
   );
 }
 
-// ---------- Master Buku Kas ----------
+// ---------- Master Buku Kas + Modul Utang Piutang Cicil Bertahap ----------
 function BukuKasTab({ data, save, flash }) {
   const safeData = normalizeData(data || {});
+  const [subTab, setSubTab] = useState("jurnal"); // Status navigasi: jurnal / utang-piutang
+  
+  // State Formulir Jurnal Kas Utama
   const [formJurnal, setFormJurnal] = useState({ tanggal: todayStr(), jenis: "Debit", nominal: "", keterangan: "" });
+  
+  // State Formulir Utang Piutang Baru
+  const [formUP, setFormUP] = useState({ tanggal: todayStr(), jenis: "UTANG", pihak: "", nominal: "", keterangan: "" });
 
+  // Logika Input Jurnal Manual
   const handleJurnalManual = () => {
     if (!Number(formJurnal.nominal)) { flash("Masukkan nominal uang!"); return; }
-    const entry = { id: uid(), ...formJurnal, nominal: Number(formJurnal.nominal) };
-    save({ ...safeData, bukuKas: [entry, ...(safeData.bukuKas || [])] });
+    
+    const nominalAngka = Number(formJurnal.nominal);
+    let nextUtangPiutang = [...(safeData.utangPiutang || [])];
+    
+    // Fitur Otomatis: Jika memasukkan keterangan mengandung unsur uang pribadi secara manual, tawarkan simpan log utang
+    if (formJurnal.jenis === "Kredit") {
+      const buatLogUtang = confirm("Anda mencatat pengeluaran Kredit.\nApakah ini menggunakan uang pribadi orang lain yang perlu dicatat sebagai UTANG TOKO?");
+      if (buatLogUtang) {
+        const namaPihak = prompt("Masukkan NAMA PIHAK yang meminjamkan uang pribadi:", "OWNER (SYAHRUL)");
+        if (namaPihak) {
+          nextUtangPiutang.unshift({
+            id: uid(),
+            tanggal: formJurnal.tanggal,
+            jenis: "UTANG",
+            pihak: namaPihak.toUpperCase().trim(),
+            nominal: nominalAngka,
+            keterangan: formJurnal.keterangan,
+            status: "Belum Lunas",
+            terbayar: 0
+          });
+        }
+      }
+    }
+
+    const entry = { id: uid(), ...formJurnal, nominal: nominalAngka };
+    save({ ...safeData, bukuKas: [entry, ...(safeData.bukuKas || [])], utangPiutang: nextUtangPiutang });
     setFormJurnal({ tanggal: todayStr(), jenis: "Debit", nominal: "", keterangan: "" });
     flash("Jurnal keuangan disimpan!");
   };
@@ -1672,6 +1703,100 @@ function BukuKasTab({ data, save, flash }) {
     }
   };
 
+  // Logika Tambah Manual Utang Piutang
+  const handleTambahUP = () => {
+    if (!formUP.pihak.trim() || !Number(formUP.nominal)) { flash("Isi nama pihak dan nominal!"); return; }
+    
+    const nominalAngka = Number(formUP.nominal);
+    const entryUP = { id: uid(), ...formUP, pihak: formUP.pihak.toUpperCase().trim(), nominal: nominalAngka, status: "Belum Lunas", terbayar: 0 };
+    
+    let nextBukuKas = [...(safeData.bukuKas || [])];
+    
+    // Otomatis Sinkronisasi ke Buku Kas Utama
+    if (formUP.jenis === "UTANG") {
+      // Toko terima uang pribadi (Debit kas toko naik)
+      nextBukuKas.unshift({
+        id: uid(),
+        tanggal: formUP.tanggal,
+        jenis: "Debit",
+        nominal: nominalAngka,
+        keterangan: `[Pencatatan Utang] Terima dana talangan pribadi dari ${formUP.pihak.toUpperCase()}`
+      });
+    } else {
+      // Toko meminjamkan uang kas ke orang luar (Kredit kas toko keluar)
+      nextBukuKas.unshift({
+        id: uid(),
+        tanggal: formUP.tanggal,
+        jenis: "Kredit",
+        nominal: nominalAngka,
+        keterangan: `[Pencatatan Piutang] Dana toko dipinjam oleh ${formUP.pihak.toUpperCase()}`
+      });
+    }
+
+    save({
+      ...safeData,
+      utangPiutang: [entryUP, ...(safeData.utangPiutang || [])],
+      bukuKas: nextBukuKas
+    });
+
+    setFormUP({ tanggal: todayStr(), jenis: "UTANG", pihak: "", nominal: "", keterangan: "" });
+    flash("Data Utang/Piutang & Arus Buku Kas disinkronkan!");
+  };
+
+  // Logika Cicil Bertahap
+  const handleCicilUP = (id) => {
+    const item = (safeData.utangPiutang || []).find((x) => x.id === id);
+    if (!item) return;
+
+    const sisaUtang = item.nominal - (item.terbayar || 0);
+    const inputCicil = prompt(`Sisa saldo tagihan: Rp ${fmt(sisaUtang)}\nMasukkan NOMINAL pembayaran cicilan baru (Rp):`, sisaUtang);
+    
+    if (!inputCicil || isNaN(inputCicil) || Number(inputCicil) <= 0) {
+      alert("Nominal pembayaran tidak valid!");
+      return;
+    }
+
+    const nominalBayar = Number(inputCicil);
+    if (nominalBayar > sisaUtang) {
+      alert("Nominal cicilan tidak boleh melebihi sisa tagihan!");
+      return;
+    }
+
+    const totalTerbayarBaru = (item.terbayar || 0) + nominalBayar;
+    const statusBaru = totalTerbayarBaru >= item.nominal ? "Lunas" : "Belum Lunas";
+
+    // Update Log di Array Utang Piutang
+    const nextUP = (safeData.utangPiutang || []).map((x) => 
+      x.id === id ? { ...x, terbayar: totalTerbayarBaru, status: statusBaru } : x
+    );
+
+    // Otomatis Catat Transaksi Pembayaran ke Buku Kas Utama
+    let nextBukuKas = [...(safeData.bukuKas || [])];
+    if (item.jenis === "UTANG") {
+      // Toko bayar utang ke owner (Uang toko keluar = Kredit)
+      nextBukuKas.unshift({
+        id: uid(),
+        tanggal: todayStr(),
+        jenis: "Kredit",
+        nominal: nominalBayar,
+        keterangan: `[Cicilan Utang Toko] Pengembalian uang pribadi ke ${item.pihak} (${statusBaru})`
+      });
+    } else {
+      // Orang luar bayar piutang ke toko (Uang toko masuk = Debit)
+      nextBukuKas.unshift({
+        id: uid(),
+        tanggal: todayStr(),
+        jenis: "Debit",
+        nominal: nominalBayar,
+        keterangan: `[Cicilan Piutang Toko] Terima setoran piutang dari ${item.pihak} (${statusBaru})`
+      });
+    }
+
+    save({ ...safeData, utangPiutang: nextUP, bukuKas: nextBukuKas });
+    flash(`Pembayaran cicilan Rp ${fmt(nominalBayar)} berhasil dibukukan!`);
+  };
+
+  // Kalkulasi Summary Buku Kas Utama
   const totalDebit = (safeData.bukuKas || []).filter(b => b.jenis === "Debit").reduce((s, b) => s + Number(b.nominal || 0), 0);
   const totalKredit = (safeData.bukuKas || []).filter(b => b.jenis === "Kredit").reduce((s, b) => s + Number(b.nominal || 0), 0);
   const saldoNetto = totalDebit - totalKredit;
@@ -1684,48 +1809,150 @@ function BukuKasTab({ data, save, flash }) {
     return { ...b, saldoKumulatif: runningSaldo };
   }).reverse();
 
+  // Kalkulasi Summary Utang & Piutang Pribadi
+  const totalUtangBelumLunas = (safeData.utangPiutang || []).filter(x => x.jenis === "UTANG").reduce((s, x) => s + (x.nominal - (x.terbayar || 0)), 0);
+  const totalPiutangBelumLunas = (safeData.utangPiutang || []).filter(x => x.jenis === "PIUTANG").reduce((s, x) => s + (x.nominal - (x.terbayar || 0)), 0);
+
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
-        <div className="gm-card" style={{ padding: 16 }}><small style={{ color: C.muted }}>TOTAL DANA CAIR MASUK (DEBIT)</small><h3 style={{ color: C.success }}>Rp {fmt(totalDebit)}</h3></div>
-        <div className="gm-card" style={{ padding: 16 }}><small style={{ color: C.muted }}>TOTAL BIAYA KELUAR (KREDIT)</small><h3 style={{ color: C.danger }}>Rp {fmt(totalKredit)}</h3></div>
-        <div className="gm-card" style={{ padding: 16 }}><small style={{ color: C.muted }}>SALDO NETTO KAS AKTIF TOKO</small><h3 style={{ color: C.primary }}>Rp {fmt(saldoNetto)}</h3></div>
+      {/* Tombol Switch Navigasi Sub-Tab internal */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+        <button className="gm-btn" style={{ background: subTab === "jurnal" ? C.primary : C.border, color: subTab === "jurnal" ? "#fff" : C.text }} onClick={() => setSubTab("jurnal")}>
+          📋 Aliran Rekening Jurnal Kas
+        </button>
+        <button className="gm-btn" style={{ background: subTab === "utang-piutang" ? C.secondary : C.border, color: subTab === "utang-piutang" ? "#fff" : C.text }} onClick={() => setSubTab("utang-piutang")}>
+          🤝 Buku Utang & Piutang Pribadi
+        </button>
       </div>
 
-      <SectionCard title="Input Manual Jurnal Buku Kas">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 2fr auto", gap: 10, alignItems: "end" }}>
-          <Field label="Tanggal"><input className="gm-input" type="date" value={formJurnal.tanggal} onChange={(e) => setFormJurnal({ ...formJurnal, tanggal: e.target.value })} /></Field>
-          <Field label="Jenis Arus Kas">
-            <select className="gm-select" value={formJurnal.jenis} onChange={(e) => setFormJurnal({ ...formJurnal, jenis: e.target.value })}>
-              <option value="Debit">Debit (Uang Masuk / Modal)</option>
-              <option value="Kredit">Kredit (Uang Keluar / Biaya)</option>
-            </select>
-          </Field>
-          <Field label="Nominal Uang (Rp)"><input className="gm-input" type="number" value={formJurnal.nominal} onChange={(e) => setFormJurnal({ ...formJurnal, nominal: e.target.value })} /></Field>
-          <Field label="Keterangan Nota"><input className="gm-input" value={formJurnal.keterangan} onChange={(e) => setFormJurnal({ ...formJurnal, keterangan: e.target.value })} /></Field>
-          <button className="gm-btn" onClick={handleJurnalManual}>Catat Kas</button>
-        </div>
-      </SectionCard>
+            {subTab === "jurnal" ? (
+        /* ================== TAMPILAN JURNAL KAS UTAMA ================== */
+        <div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
+            <div className="gm-card" style={{ padding: 16 }}><small style={{ color: C.muted }}>TOTAL DANA CAIR MASUK (DEBIT)</small><h3 style={{ color: C.success }}>Rp {fmt(totalDebit)}</h3></div>
+            <div className="gm-card" style={{ padding: 16 }}><small style={{ color: C.muted }}>TOTAL BIAYA KELUAR (KREDIT)</small><h3 style={{ color: C.danger }}>Rp {fmt(totalKredit)}</h3></div>
+            <div className="gm-card" style={{ padding: 16 }}><small style={{ color: C.muted }}>SALDO NETTO KAS AKTIF TOKO</small><h3 style={{ color: C.primary }}>Rp {fmt(saldoNetto)}</h3></div>
+          </div>
 
-      <SectionCard title="Rekening Koran & Saldo Berjalan Kronologis">
-        <div style={{ overflowX: "auto" }}>
-          <table className="gm-table" style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th>No</th><th>Tanggal</th><th>Deskripsi Transaksi</th><th>Debit (+)</th><th>Kredit (-)</th><th>Saldo Kumulatif</th><th>Aksi</th></tr></thead>
-            <tbody>
-              {kasWithSaldo.length === 0 && <EmptyRow colSpan={7} text="Belum ada transaksi kas." />}
-              {kasWithSaldo.map((b, idx) => (
-                <tr key={b.id}>
-                  <td>{idx + 1}</td><td>{b.tanggal}</td><td>{b.keterangan}</td>
-                  <td style={{ color: C.success }}>{b.jenis === "Debit" ? `Rp ${fmt(b.nominal)}` : "—"}</td>
-                  <td style={{ color: C.danger }}>{b.jenis === "Kredit" ? `Rp ${fmt(b.nominal)}` : "—"}</td>
-                  <td style={{ fontWeight: "bold" }}>Rp {fmt(b.saldoKumulatif)}</td>
-                  <td><DeleteBtn onClick={() => removeJurnal(b.id)} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SectionCard title="Input Manual Jurnal Buku Kas">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 2fr auto", gap: 10, alignItems: "end" }}>
+              <Field label="Tanggal"><input className="gm-input" type="date" value={formJurnal.tanggal} onChange={(e) => setFormJurnal({ ...formJurnal, tanggal: e.target.value })} /></Field>
+              <Field label="Jenis Arus Kas">
+                <select className="gm-select" value={formJurnal.jenis} onChange={(e) => setFormJurnal({ ...formJurnal, jenis: e.target.value })}>
+                  <option value="Debit">Debit (Uang Masuk / Modal)</option>
+                  <option value="Kredit">Kredit (Uang Keluar / Biaya)</option>
+                </select>
+              </Field>
+              <Field label="Nominal Uang (Rp)"><input className="gm-input" type="number" value={formJurnal.nominal} onChange={(e) => setFormJurnal({ ...formJurnal, nominal: e.target.value })} /></Field>
+              <Field label="Keterangan Nota"><input className="gm-input" value={formJurnal.keterangan} onChange={(e) => setFormJurnal({ ...formJurnal, keterangan: e.target.value })} /></Field>
+              <button className="gm-btn" onClick={handleJurnalManual}>Catat Kas</button>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Rekening Koran & Saldo Berjalan Kronologis">
+            <div style={{ overflowX: "auto" }}>
+              <table className="gm-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr><th>No</th><th>Tanggal</th><th>Deskripsi Transaksi</th><th>Debit (+)</th><th>Kredit (-)</th><th>Saldo Kumulatif</th><th>Aksi</th></tr></thead>
+                <tbody>
+                  {kasWithSaldo.length === 0 && <EmptyRow colSpan={7} text="Belum ada transaksi kas." />}
+                  {kasWithSaldo.map((b, idx) => (
+                    <tr key={b.id}>
+                      <td>{idx + 1}</td>
+                      <td>{b.tanggal}</td>
+                      <td style={{ whiteSpace: "normal" }}>{b.keterangan}</td>
+                      <td style={{ color: C.success, fontWeight: b.jenis === "Debit" ? "600" : "normal" }}>
+                        {b.jenis === "Debit" ? `Rp ${fmt(b.nominal)}` : "—"}
+                      </td>
+                      <td style={{ color: C.danger, fontWeight: b.jenis === "Kredit" ? "600" : "normal" }}>
+                        {b.jenis === "Kredit" ? `Rp ${fmt(b.nominal)}` : "—"}
+                      </td>
+                      <td style={{ fontWeight: "bold", color: b.saldoKumulatif >= 0 ? C.text : C.danger }}>
+                        Rp {fmt(b.saldoKumulatif)}
+                      </td>
+                      <td><DeleteBtn onClick={() => removeJurnal(b.id)} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
         </div>
-      </SectionCard>
+      ) : (
+        /* ================== TAMPILAN MODUL UTANG PIUTANG PRIBADI ================== */
+        <div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+            <div className="gm-card" style={{ padding: 16, borderLeft: `5px solid ${C.danger}` }}>
+              <small style={{ color: C.muted, fontWeight: 700 }}>TOTAL UTANG TOKO (Wajib Toko Bayar Balik)</small>
+              <h3 style={{ color: C.danger, fontSize: 22, marginTop: 4 }}>Rp {fmt(totalUtangBelumLunas)}</h3>
+            </div>
+            <div className="gm-card" style={{ padding: 16, borderLeft: `5px solid ${C.success}` }}>
+              <small style={{ color: C.muted, fontWeight: 700 }}>TOTAL PIUTANG TOKO (Dana Toko di Luar)</small>
+              <h3 style={{ color: C.success, fontSize: 22, marginTop: 4 }}>Rp {fmt(totalPiutangBelumLunas)}</h3>
+            </div>
+          </div>
+
+          <SectionCard title="Pencatatan Baru Utang / Piutang Dana Pribadi" subtitle="Sistem otomatis mengalirkan nominal transaksi ke kas utama toko sebagai penyeimbang modal">
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1.5fr 1.2fr 2fr auto", gap: 10, alignItems: "end" }}>
+              <Field label="Tanggal"><input className="gm-input" type="date" value={formUP.tanggal} onChange={(e) => setFormUP({ ...formUP, tanggal: e.target.value })} /></Field>
+              <Field label="Kategori">
+                <select className="gm-select" value={formUP.jenis} onChange={(e) => setFormUP({ ...formUP, jenis: e.target.value })}>
+                  <option value="UTANG">UTANG (Toko Pinjam Uang)</option>
+                  <option value="PIUTANG">PIUTANG (Toko Pinjamkan Uang)</option>
+                </select>
+              </Field>
+              <Field label="Nama Pihak (Ketik Bebas)"><input className="gm-input" placeholder="Contoh: Owner Syahrul / Ildan" value={formUP.pihak} onChange={(e) => setFormUP({ ...formUP, pihak: e.target.value })} /></Field>
+              <Field label="Nominal Uang (Rp)"><input className="gm-input" type="number" placeholder="0" value={formUP.nominal} onChange={(e) => setFormUP({ ...formUP, nominal: e.target.value })} /></Field>
+              <Field label="Keterangan Nota"><input className="gm-input" placeholder="Alasan pemakaian dana" value={formUP.keterangan} onChange={(e) => setFormUP({ ...formUP, keterangan: e.target.value })} /></Field>
+              <button className="gm-btn" style={{ background: C.secondary }} onClick={handleTambahUP}>Simpan Data</button>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Daftar Buku Kendali Utang & Piutang Berjalan">
+            <div style={{ overflowX: "auto" }}>
+              <table className="gm-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th>Tanggal</th><th>Jenis</th><th>Nama Pihak</th><th>Keterangan Nota</th><th>Total Utama</th><th>Sudah Dicicil</th><th>Sisa Tagihan</th><th>Status</th><th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(safeData.utangPiutang || []).length === 0 && <EmptyRow colSpan={9} text="Bersih! Tidak ada tanggungan utang piutang pribadi." />}
+                  {(safeData.utangPiutang || []).map((x) => {
+                    const sisa = x.nominal - (x.terbayar || 0);
+                    return (
+                      <tr key={x.id}>
+                        <td>{x.tanggal}</td>
+                        <td>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: x.jenis === "UTANG" ? "#F5E1DC" : "#E4EFE4", color: x.jenis === "UTANG" ? C.danger : C.success }}>
+                            {x.jenis}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: "bold" }}>{x.pihak}</td>
+                        <td style={{ whiteSpace: "normal" }}>{x.keterangan}</td>
+                        <td>Rp {fmt(x.nominal)}</td>
+                        <td style={{ color: C.success }}>Rp {fmt(x.terbayar || 0)}</td>
+                        <td style={{ fontWeight: 700, color: sisa > 0 ? C.primary : C.muted }}>Rp {fmt(sisa)}</td>
+                        <td>
+                          <span style={{ fontWeight: 700, color: x.status === "Lunas" ? C.success : C.danger }}>
+                            {x.status === "Lunas" ? "✓ Lunas" : "⏳ Belum Lunas"}
+                          </span>
+                        </td>
+                        <td>
+                          {x.status !== "Lunas" && (
+                            <button className="gm-btn" style={{ padding: "4px 10px", fontSize: 11, background: C.success }} onClick={() => handleCicilUP(x.id)}>
+                              💵 Cicil / Bayar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+        </div>
+      )}
     </div>
   );
 }
@@ -1745,17 +1972,69 @@ function KeuanganTab({ data, save, flash }) {
 
   const karyawanList = (safeData.karyawanMaster || []).map((k) => k.nama).filter(Boolean) || [];
 
-  const submitKasbon = () => {
+    const submitKasbon = () => {
     if (!formKasbon.nama.trim() || !Number(formKasbon.nominal)) { flash("Isi nama karyawan and nominal kasbon!"); return; }
-    const entry = { id: uid(), tanggal: formKasbon.tanggal, nama: formKasbon.nama, nominal: Number(formKasbon.nominal), keterangan: formKasbon.keterangan };
+    
+    const kasbonId = uid();
+    const tglSekarang = formKasbon.tanggal;
+    const nominalAngka = Number(formKasbon.nominal);
+    
+    const entryKasbon = { id: kasbonId, tanggal: tglSekarang, nama: formKasbon.nama, nominal: nominalAngka, keterangan: formKasbon.keterangan };
+    const pakeUangPribadi = confirm("Apakah kasbon ini menggunakan UANG PRIBADI (Nalangi)?\n\nKlik OK jika pakai uang pribadi.\nKlik BATAL jika pakai uang kas toko asli.");
+    
+    let nextBukuKas = [...(safeData.bukuKas || [])];
+    let nextUtangPiutang = [...(safeData.utangPiutang || [])];
+    
+    if (pakeUangPribadi) {
+      const namaTalangan = prompt("Masukkan nama pihak yang menalangi uang pribadi ini:", "Owner (Syahrul)");
+      if (!namaTalangan) { alert("Transaksi dibatalkan. Nama penalang wajib diisi."); return; }
+      
+      nextBukuKas.unshift({
+        id: uid(),
+        tanggal: tglSekarang,
+        jenis: "Debit",
+        nominal: nominalAngka,
+        keterangan: `[Suntikan Dana] Talangan Kasbon ${formKasbon.nama} oleh ${namaTalangan.toUpperCase()}`
+      });
+      
+      nextBukuKas.unshift({
+        id: uid(),
+        tanggal: tglSekarang,
+        jenis: "Kredit",
+        nominal: nominalAngka,
+        keterangan: `[Kasbon Pegawai] Nama: ${formKasbon.nama} | Memo: ${formKasbon.keterangan || "Pinjaman"}`
+      });
+      
+      nextUtangPiutang.unshift({
+        id: uid(),
+        tanggal: tglSekarang,
+        jenis: "UTANG", 
+        pihak: namaTalangan.toUpperCase(),
+        nominal: nominalAngka,
+        keterangan: `Menalangi kasbon pegawai atas nama ${formKasbon.nama}`,
+        status: "Belum Lunas",
+        terbayar: 0
+      });
+      
+    } else {
+      nextBukuKas.unshift({ 
+        id: uid(), 
+        tanggal: tglSekarang, 
+        jenis: "Kredit", 
+        nominal: nominalAngka, 
+        keterangan: `[Kasbon Pegawai] Nama: ${formKasbon.nama} | Memo: ${formKasbon.keterangan || "Pinjaman"}` 
+      });
+    }
     
     save({
       ...safeData,
-      kasbon: [entry, ...(safeData.kasbon || [])],
-      bukuKas: [{ id: uid(), tanggal: formKasbon.tanggal, jenis: "Kredit", nominal: Number(formKasbon.nominal), keterangan: `[Kasbon Pegawai] Nama: ${formKasbon.nama} | Memo: ${formKasbon.keterangan || "Pinjaman"}` }, ...(safeData.bukuKas || [])]
+      kasbon: [entryKasbon, ...(safeData.kasbon || [])],
+      bukuKas: nextBukuKas,
+      utangPiutang: nextUtangPiutang
     });
+    
     setFormKasbon({ tanggal: todayStr(), nama: "", nominal: "", keterangan: "" });
-    flash("Kasbon pegawai dicatat memotong Buku Kas utama");
+    flash("Kasbon pegawai & sinkronisasi dana berhasil disimpan!");
   };
 
   const saveSalarySettings = () => {
